@@ -29,6 +29,9 @@ from os import listdir, remove, makedirs
 from os.path import isdir, isfile, join, exists
 import rasterio
 import rasterio.shutil
+from rasterio._env import contextmanager
+from rasterio._io import Affine
+from rasterio.enums import Resampling
 from zipfile import ZipFile
 
 import pathlib
@@ -52,7 +55,7 @@ def list_theia_dir(in_dir):
     zip_files = [f for f in dir_files if f[-4:] == ".zip"]
     theia_zip = [os.path.abspath(os.path.join(in_dir, f)) for f in zip_files if f[:8] == "SENTINEL"]
 
-    return theia_dir+theia_zip
+    return theia_dir + theia_zip
 
 
 def get_rel_orbit(abs_orbit, sat_id):
@@ -101,9 +104,9 @@ def theia_get_band(s2_tile_path, band_id):
         "11": "_FRE_B11",
         "12": "_FRE_B12"}
 
-    band_suffix = band_dict[band_id]+".tif"
+    band_suffix = band_dict[band_id] + ".tif"
     if is_zip:
-        #out_path = "zip+file://{0}".format(os.path.join(s2_tile_path+"!",tile_name, tile_name + band_suffix))
+        # out_path = "zip+file://{0}".format(os.path.join(s2_tile_path+"!",tile_name, tile_name + band_suffix))
         out_path = "zip+file://{0}".format(s2_tile_path + "!" + "/" + tile_name + "/" + tile_name + band_suffix)
     else:
         out_path = os.path.join(s2_tile_path, tile_name + band_suffix)
@@ -130,10 +133,11 @@ def theia_get_masks(s2_tile_path):
     for mask in ["CLM", "EDG", "SAT", "MG2"]:
         for res in ["R1", "R2"]:
             if is_zip:
-                #curr_mask = "zip+file://{0}".format(os.path.join(s2_tile_path+"!", tile_name, "MASKS", tile_name+f"_{mask}_{res}.tif"))
-                curr_mask = "zip+file://{0}".format(s2_tile_path + "!" + "/" + tile_name + "/MASKS/" + tile_name + f"_{mask}_{res}.tif")
+                # curr_mask = "zip+file://{0}".format(os.path.join(s2_tile_path+"!", tile_name, "MASKS", tile_name+f"_{mask}_{res}.tif"))
+                curr_mask = "zip+file://{0}".format(
+                    s2_tile_path + "!" + "/" + tile_name + "/MASKS/" + tile_name + f"_{mask}_{res}.tif")
             else:
-                curr_mask = os.path.join(s2_tile_path, "MASKS", tile_name+f"_{mask}_{res}.tif")
+                curr_mask = os.path.join(s2_tile_path, "MASKS", tile_name + f"_{mask}_{res}.tif")
             masks.append(curr_mask)
     # edge_mask = os.path.join(s2_tile_path, "MASKS", tile_name+"_EDG_R1.tif")
     # saturation_mask = os.path.join(s2_tile_path, "MASKS", tile_name+"_SAT_R1.tif")
@@ -170,7 +174,6 @@ if __name__ == "__main__":
     out_dir = os.path.abspath(out_dir)
     all_theia_archives = list_theia_dir(args.in_s2_dir)
     logging.info("find  {0} archives".format(len(all_theia_archives)))
-
     for theia_archive in all_theia_archives:
         out_tile_dir = os.path.join(out_dir, os.path.basename(theia_archive))
         if out_tile_dir[-4:] == ".zip":
@@ -182,21 +185,45 @@ if __name__ == "__main__":
 
         pathlib.Path(out_tile_dir).mkdir(parents=True, exist_ok=True)
 
-        for band in out_bands:
-            in_band_path = theia_get_band(theia_archive, band)
-            out_band_path = os.path.join(out_tile_dir, os.path.basename(in_band_path))
+        scale = 2
+        kwds = {'driver': 'GTiff', 'interleave': 'band', 'width': 10980, 'height': 10980,
+                # 'tilted': 'YES',
+                'blockxsize': 512, 'blockysize': 512, 'compress': 'DEFLATE', 'predictor': 2, 'count': 10,
+                'dtype': 'int16', 'transform': Affine(10.0, 0.0, 600000.0, 0.0, -10.0, 5200020.0)}
+        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/merge_band.tif', 'w', **kwds) as dest:
+            for idx, band in enumerate(out_bands):
+                in_band_path = theia_get_band(theia_archive, band)
+                out_band_path = os.path.join(out_tile_dir, os.path.basename(in_band_path))
+                with rasterio.open(in_band_path) as in_band:
+                    if band in bands_10m:
+                            dest.write(in_band.read(1), idx + 1)
+                    if band in bands_20m:
+                        height = in_band.height / scale
+                        width = in_band.width / scale
+                        data = in_band.read(
+                            out_shape=(in_band.count, int(height), int(width)),
+                            resampling=Resampling.bilinear)
 
-            with rasterio.open(in_band_path) as in_band:
-                rasterio.shutil.copy(
-                    in_band, out_band_path, driver='GTiff', tiled='YES', blockxsize=512, blockysize=512,
-                    compress="DEFLATE", predictor=2)
+                        transform = in_band.transform * in_band.transform.scale(
+                            (in_band.width / data.shape[-1]),
+                            (in_band.height / data.shape[-2]))
+                        profile = in_band.profile
+                        profile.update(transform=transform, driver='GTiff', height=height, width=width, crs=in_band.crs)
+                        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/10m/' + str(idx) + '.tif', 'w', **profile) as step
+                            step.write(data)
+                        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/10m/' + str(idx) + '.tif') as resampled_band:
+                            dest.write(resampled_band.read(1), idx + 1)
 
-        mask_dir = os.path.join(out_tile_dir, "MASKS")
-        pathlib.Path(mask_dir).mkdir(parents=True, exist_ok=True)
-        mask_list = theia_get_masks(theia_archive)
-        for mask_path in mask_list:
-            out_mask_path = os.path.join(mask_dir, os.path.basename(mask_path))
-            with rasterio.open(mask_path) as in_mask:
-                rasterio.shutil.copy(
-                    in_mask, out_mask_path, driver='GTiff', tiled='YES', blockxsize=512, blockysize=512,
-                    compress="DEFLATE", predictor=2)
+        # rasterio.shutil.copy(
+        #     in_band, out_band_path, driver='GTiff', tiled='YES', blockxsize=512, blockysize=512,
+        #     compress="DEFLATE", predictor=2)
+
+        # mask_dir = os.path.join(out_tile_dir, "MASKS")
+        # pathlib.Path(mask_dir).mkdir(parents=True, exist_ok=True)
+        # mask_list = theia_get_masks(theia_archive)
+        # for mask_path in mask_list:
+        #     out_mask_path = os.path.join(mask_dir, os.path.basename(mask_path))
+        #     with rasterio.open(mask_path) as in_mask:
+        #         rasterio.shutil.copy(
+        #             in_mask, out_mask_path, driver='GTiff', tiled='YES', blockxsize=512, blockysize=512,
+        #             compress="DEFLATE", predictor=2)
