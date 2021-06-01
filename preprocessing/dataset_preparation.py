@@ -19,9 +19,6 @@ from shapely.geometry import Polygon
 from tqdm import tqdm
 import json
 import os
-
-
-
 def prepare_dataset(output_path, input_folder, rpg_file, label_names=['CODE_GROUP']):
     """
 
@@ -42,7 +39,6 @@ def prepare_dataset(output_path, input_folder, rpg_file, label_names=['CODE_GROU
 def crop_and_write(output_path, tifs, date_index, polygons, lab_rpg):
     nparcels = len(polygons)
     ndates = len(date_index)
-
     prepare_output(output_path)
 
     count = 0
@@ -51,9 +47,7 @@ def crop_and_write(output_path, tifs, date_index, polygons, lab_rpg):
     labels = dict([(l, {}) for l in lab_rpg.keys()])
 
     for tifname in tifs:
-
         date = date_parser(tifname)
-        print(date)
         didx = date_index[date]
 
         dates[didx] = date
@@ -65,6 +59,7 @@ def crop_and_write(output_path, tifs, date_index, polygons, lab_rpg):
                 try:
                     # crop parcel
                     try:
+
                         crop, transform = rasterio.mask.mask(src, [p], crop=True, nodata=np.iinfo(np.uint16).max)
                     except ValueError:
                         # Error when polygon does not complelety overlap raster, those (few) polygons are not included in the dataset
@@ -140,16 +135,16 @@ def parse_rpg(rpg_file, label_names=['CODE_GROUP']):
     lab_rpg = dict([(l, {}) for l in label_names])
 
     for f in tqdm(data['features']):
-        p = Polygon(f['geometry']['coordinates'][0][0])
-        polygons[f['properties']['ID_PARCEL']] = p
+        p = Polygon(f['geometry']['coordinates'][0])
+        polygons[f['properties']['UID']] = p
         for l in label_names:
-            lab_rpg[l][f['properties']['ID_PARCEL']] = f['properties'][l]
+            lab_rpg[l][f['properties']['UID']] = f['properties'][l]
     return polygons, lab_rpg
 
 
 def get_dates(input_folder):
     tifs = list_extension(input_folder, '.tif')
-    tifs =  np.sort(tifs)
+    tifs = np.sort(tifs)
     dates = [int(t.replace('.tif', '')) for t in tifs]
 
     ndates = len(dates)
@@ -169,8 +164,8 @@ def prepare_output(output_path):
 
 
 if __name__ == '__main__':
-    rpg_file = 'rpg_2017_T31TFM.geojson'
-    input_folder = './S2-L2A-2017-T31TFM'
-    out_path = './PixelSet-S2-2017-T31TFM'
+    rpg_file = 'C:/Users/felix/OneDrive/Bureau/test/out/lpis_stable_all_years.geojson'
+    input_folder = 'C:/Users/felix/OneDrive/Bureau/test/out/proj/'
+    out_path = 'C:/Users/felix/OneDrive/Bureau/test/out/dataset_preparation/'
 
-    prepare_dataset(out_path, input_folder, rpg_file, label_names=['CODE_GROUP'])
+    prepare_dataset(out_path, input_folder, rpg_file, label_names=['CODE9_2018', 'CODE9_2019', 'CODE9_2020'])

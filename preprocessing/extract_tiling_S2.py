@@ -27,11 +27,9 @@ import logging
 import os
 from os import listdir, remove, makedirs
 from os.path import isdir, isfile, join, exists
-import rasterio
 import rasterio.shutil
-from rasterio._env import contextmanager
-from rasterio._io import Affine
-from rasterio.enums import Resampling
+from rasterio.warp import calculate_default_transform, reproject, Resampling
+
 from zipfile import ZipFile
 
 import pathlib
@@ -139,9 +137,6 @@ def theia_get_masks(s2_tile_path):
             else:
                 curr_mask = os.path.join(s2_tile_path, "MASKS", tile_name + f"_{mask}_{res}.tif")
             masks.append(curr_mask)
-    # edge_mask = os.path.join(s2_tile_path, "MASKS", tile_name+"_EDG_R1.tif")
-    # saturation_mask = os.path.join(s2_tile_path, "MASKS", tile_name+"_SAT_R1.tif")
-    # mg_mask = os.path.join(s2_tile_path, "MASKS", tile_name+"_MG2_R1.tif")
 
     return masks
 
@@ -183,13 +178,12 @@ if __name__ == "__main__":
         if os.path.exists(out_tile_dir):
             continue
 
-        pathlib.Path(out_tile_dir).mkdir(parents=True, exist_ok=True)
-
+        in_band_1 = theia_get_band(theia_archive, bands_10m[0])
+        with rasterio.open(in_band_1) as band_1:
+            kwds = band_1.profile
         scale = 2
-        kwds = {'driver': 'GTiff', 'interleave': 'band', 'width': 10980, 'height': 10980, 'tiled': 'yes',
-                'blockxsize': 512, 'blockysize': 512, 'compress': 'DEFLATE', 'predictor': 2, 'count': 10,
-                'dtype': 'int16', 'transform': Affine(10.0, 0.0, 600000.0, 0.0, -10.0, 5200020.0)}
-        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/' + tif_name + '.tif', 'w', **kwds) as dest:
+        kwds.update(count=len(out_bands), dtype='int16')
+        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/preproj/' + tif_name + '.tif', 'w', **kwds) as dest:
             for idx, band in enumerate(out_bands):
                 in_band_path = theia_get_band(theia_archive, band)
                 out_band_path = os.path.join(out_tile_dir, os.path.basename(in_band_path))
@@ -214,6 +208,7 @@ if __name__ == "__main__":
                         with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/10m/' + str(idx) + '.tif')\
                                 as resampled_band:
                             dest.write(resampled_band.read(1), idx + 1)
+
         # rasterio.shutil.copy(
         #     in_band, out_band_path, driver='GTiff', tiled='YES', blockxsize=512, blockysize=512,
         #     compress="DEFLATE", predictor=2)
