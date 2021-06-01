@@ -143,31 +143,33 @@ def theia_get_masks(s2_tile_path):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="extract s2 tiles and delete unused file")
-    parser.add_argument(
-        "-i", "--in_s2_dir", dest="in_s2_dir", help="input dir containing s2 tile form theia", required=True)
-    parser.add_argument(
-        "-o", "--out_s2_dir", dest="out_s2_dir", help="output dir containing s2 tile with tiling", required=True)
-    parser.add_argument(
-        "-b", "--out_bands", dest="out_bands", help="s2 bands to extract, all by default", nargs='+', required=False)
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description="extract s2 tiles and delete unused file")
+    # parser.add_argument(
+    #     "-i", "--in_s2_dir", dest="in_s2_dir", help="input dir containing s2 tile form theia", required=True)
+    # parser.add_argument(
+    #     "-o", "--out_s2_dir", dest="out_s2_dir", help="output dir containing s2 tile with tiling", required=True)
+    # parser.add_argument(
+    #     "-b", "--out_bands", dest="out_bands", help="s2 bands to extract, all by default", nargs='+', required=False)
+    # args = parser.parse_args()
 
     logging.basicConfig()
     logging.getLogger().setLevel(logging.INFO)
 
-    out_dir = args.out_s2_dir
+    out_dir = "/mnt/71A36E2C77574D51/donnees/out"
+    #out_dir = args.out_s2_dir
     if not exists(out_dir):
         makedirs(out_dir)
 
-    if not args.out_bands:
-        bands_10m = ["2", "3", "4", "8"]
-        bands_20m = ["5", "6", "7", "8A", "11", "12"]
-        out_bands = bands_10m + bands_20m
-    else:
-        out_bands = args.out_bands
+    # if not args.out_bands:
+    bands_10m = ["2", "3", "4", "8"]
+    bands_20m = ["5", "6", "7", "8A", "11", "12"]
+    out_bands = bands_10m + bands_20m
+    # else:
+    #     out_bands = args.out_bands
 
     out_dir = os.path.abspath(out_dir)
-    all_theia_archives = list_theia_dir(args.in_s2_dir)
+    #all_theia_archives = list_theia_dir(args.in_s2_dir)
+    all_theia_archives = list_theia_dir("/mnt/71A36E2C77574D51/donnees/in")
     logging.info("find  {0} archives".format(len(all_theia_archives)))
     for theia_archive in all_theia_archives:
         out_tile_dir = os.path.join(out_dir, os.path.basename(theia_archive))
@@ -183,6 +185,7 @@ if __name__ == "__main__":
             kwds = band_1.profile
         scale = 2
         kwds.update(count=len(out_bands), dtype='int16')
+        print(kwds)
         with rasterio.open('/mnt/71A36E2C77574D51/donnees/out/preproj/' + tif_name + '.tif', 'w', **kwds) as dest:
             for idx, band in enumerate(out_bands):
                 in_band_path = theia_get_band(theia_archive, band)

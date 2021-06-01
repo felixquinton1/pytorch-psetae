@@ -10,9 +10,9 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 from zipfile import ZipFile
 if __name__ == "__main__":
     dst_crs = 'EPSG:2154'
-    for tif_name in os.listdir('C:/Users/felix/OneDrive/Bureau/test/out/preproj/'):
+    for tif_name in os.listdir('/mnt/71A36E2C77574D51/donnees/out/preproj/'):
         print(tif_name)
-        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/preproj/' + tif_name) as src:
+        with rasterio.open('/mnt/71A36E2C77574D51/donnees/out/preproj/' + tif_name) as src:
             transform, width, height = calculate_default_transform(
                 src.crs, dst_crs, src.width, src.height, *src.bounds)
             kwargs = src.meta.copy()
@@ -22,7 +22,7 @@ if __name__ == "__main__":
                 'width': width,
                 'height': height
             })
-            with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/proj/' + tif_name, 'w', **kwargs) as dst:
+            with rasterio.open('/mnt/71A36E2C77574D51/donnees/out/proj/' + tif_name, 'w', **kwargs) as dst:
                 for i in range(1, src.count + 1):
                     reproject(
                         source=rasterio.band(src, i),

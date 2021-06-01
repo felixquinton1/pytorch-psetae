@@ -135,10 +135,11 @@ def parse_rpg(rpg_file, label_names=['CODE_GROUP']):
     lab_rpg = dict([(l, {}) for l in label_names])
 
     for f in tqdm(data['features']):
-        p = Polygon(f['geometry']['coordinates'][0])
-        polygons[f['properties']['UID']] = p
-        for l in label_names:
-            lab_rpg[l][f['properties']['UID']] = f['properties'][l]
+        if(len(f['geometry']['coordinates'][0])>2):
+            p = Polygon(f['geometry']['coordinates'][0])
+            polygons[f['properties']['UID_2018']] = p
+            for l in label_names:
+                lab_rpg[l][f['properties']['UID_2018']] = f['properties'][l]
     return polygons, lab_rpg
 
 
@@ -164,8 +165,8 @@ def prepare_output(output_path):
 
 
 if __name__ == '__main__':
-    rpg_file = 'C:/Users/felix/OneDrive/Bureau/test/out/lpis_stable_all_years.geojson'
-    input_folder = 'C:/Users/felix/OneDrive/Bureau/test/out/proj/'
-    out_path = 'C:/Users/felix/OneDrive/Bureau/test/out/dataset_preparation/'
+    rpg_file = '/mnt/71A36E2C77574D51/donnees/out/GEOJSON/lpis_stable_all_years_reprojected.json'
+    input_folder = '/mnt/71A36E2C77574D51/donnees/out/proj/'
+    out_path = '/home/FQuinton/Bureau/donnees_pse/'
 
     prepare_dataset(out_path, input_folder, rpg_file, label_names=['CODE9_2018', 'CODE9_2019', 'CODE9_2020'])
