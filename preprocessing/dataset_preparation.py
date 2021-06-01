@@ -166,7 +166,7 @@ def prepare_output(output_path):
 
 if __name__ == '__main__':
     rpg_file = '/mnt/71A36E2C77574D51/donnees/out/GEOJSON/lpis_stable_all_years_reprojected.json'
-    input_folder = '/mnt/71A36E2C77574D51/donnees/out/proj/'
+    input_folder = '/mnt/71A36E2C77574D51/donnees/out/preproj/'
     out_path = '/home/FQuinton/Bureau/donnees_pse/'
 
     prepare_dataset(out_path, input_folder, rpg_file, label_names=['CODE9_2018', 'CODE9_2019', 'CODE9_2020'])
