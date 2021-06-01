@@ -183,7 +183,7 @@ if __name__ == "__main__":
             kwds = band_1.profile
         scale = 2
         kwds.update(count=len(out_bands), dtype='int16')
-        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/preproj/' + tif_name + '.tif', 'w', **kwds) as dest:
+        with rasterio.open('/mnt/71A36E2C77574D51/donnees/out/preproj/' + tif_name + '.tif', 'w', **kwds) as dest:
             for idx, band in enumerate(out_bands):
                 in_band_path = theia_get_band(theia_archive, band)
                 out_band_path = os.path.join(out_tile_dir, os.path.basename(in_band_path))
@@ -202,10 +202,10 @@ if __name__ == "__main__":
                             (in_band.height / data.shape[-2]))
                         profile = in_band.profile
                         profile.update(transform=transform, driver='GTiff', height=height, width=width, crs=in_band.crs)
-                        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/10m/' + str(idx) + '.tif',
+                        with rasterio.open('/mnt/71A36E2C77574D51/donnees/out/10m/' + str(idx) + '.tif',
                                            'w', **profile) as step:
                             step.write(data)
-                        with rasterio.open('C:/Users/felix/OneDrive/Bureau/test/out/10m/' + str(idx) + '.tif')\
+                        with rasterio.open('/mnt/71A36E2C77574D51/donnees/out/10m/' + str(idx) + '.tif')\
                                 as resampled_band:
                             dest.write(resampled_band.read(1), idx + 1)
 
