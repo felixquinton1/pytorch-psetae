@@ -48,6 +48,7 @@ def crop_and_write(output_path, tifs, date_index, polygons, lab_rpg):
 
     for tifname in tifs:
         date = date_parser(tifname)
+        year = str(date)[0:4]
         didx = date_index[date]
 
         dates[didx] = date
@@ -72,14 +73,13 @@ def crop_and_write(output_path, tifs, date_index, polygons, lab_rpg):
                     pixels = np.stack(pixels, axis=0) # (C, S)
 
                     pixels = pixels.reshape((1, *pixels.shape)) # (1, C, S)
-
                     # Get pixels from already computed dates
                     if didx != 0:
-                        previous_dates_pixels = np.load(os.path.join(output_path, 'DATA', '{}.npy'.format(str(parcel_id))))
+                        previous_dates_pixels = np.load(os.path.join(output_path, 'DATA', year, '{}.npy'.format(str(parcel_id))))
                         pixels = np.concatenate([previous_dates_pixels, pixels], axis=0)
 
                     # Write new array of pixels (shape TxCxS: time , channel, number of pixels)
-                    np.save(os.path.join(output_path, 'DATA', str(parcel_id)), pixels)
+                    np.save(os.path.join(output_path, 'DATA', year, str(parcel_id)), pixels)
 
                     if count == 0:  # We need to do this only once
                         sizes[parcel_id] = pixels.shape[-1]
@@ -135,7 +135,7 @@ def parse_rpg(rpg_file, label_names=['CODE_GROUP']):
     lab_rpg = dict([(l, {}) for l in label_names])
 
     for f in tqdm(data['features']):
-        if(len(f['geometry']['coordinates'][0])>2):
+        if len(f['geometry']['coordinates'][0]) > 2:
             p = Polygon(f['geometry']['coordinates'][0])
             polygons[f['properties']['UID_2018']] = p
             for l in label_names:
@@ -160,13 +160,20 @@ def get_dates(input_folder):
 
 def prepare_output(output_path):
     os.makedirs(output_path, exist_ok=True)
-    os.makedirs(os.path.join(output_path, 'DATA'), exist_ok=True)
+    # os.makedirs(os.path.join(output_path, 'DATA'), exist_ok=True)
     os.makedirs(os.path.join(output_path, 'META'), exist_ok=True)
+    os.makedirs(os.path.join(output_path, 'DATA', '2018'), exist_ok=True)
+    os.makedirs(os.path.join(output_path, 'DATA', '2019'), exist_ok=True)
+    os.makedirs(os.path.join(output_path, 'DATA', '2020'), exist_ok=True)
 
 
 if __name__ == '__main__':
-    rpg_file = '/mnt/71A36E2C77574D51/donnees/out/GEOJSON/lpis_stable_all_years_reprojected.json'
-    input_folder = '/mnt/71A36E2C77574D51/donnees/out/preproj/'
-    out_path = '/home/FQuinton/Bureau/donnees_pse/'
+    # rpg_file = '/mnt/71A36E2C77574D51/donnees/out/GEOJSON/lpis_stable_all_years_reprojected.json'
+    # input_folder = '/mnt/71A36E2C77574D51/donnees/out/preproj/'
+    # out_path = '/home/FQuinton/Bureau/donnees_pse/'
+
+    rpg_file = 'C:/Users/felix/OneDrive/Bureau/test/out/lpis_stable_all_years_reprojected.json'
+    input_folder = 'C:/Users/felix/OneDrive/Bureau/test/out/preproj/'
+    out_path = 'C:/Users/felix/OneDrive/Bureau/test/out/dataset_preparation/'
 
     prepare_dataset(out_path, input_folder, rpg_file, label_names=['CODE9_2018', 'CODE9_2019', 'CODE9_2020'])
